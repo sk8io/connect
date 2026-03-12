@@ -1,0 +1,22 @@
+{
+  "name": "@sk8/connect",
+  "version": "1.0.4",
+  "description": "SK8 vendor integration SDK — middleware and embeddable components",
+  "homepage": "https://github.com/sk8io/connect#readme",
+  "bugs": {
+    "url": "https://github.com/sk8io/connect/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sk8io/connect.git"
+  },
+  "license": "ISC",
+  "main": "./src/index.js",
+  "files": [
+    "src/",
+    "embed/"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}

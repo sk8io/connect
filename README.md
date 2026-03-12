@@ -43,8 +43,14 @@ This middleware must set `clientId` attribute on the request object.
 
 ```js
 // Example: Express.js implementation
+
+// CommonJS
 const express = require('express');
 const { initializeSK8Middleware } = require('@sk8/connect');
+
+// ESM
+import express from 'express';
+import { initializeSK8Middleware } from '@sk8/connect';
 
 const app = express();
 

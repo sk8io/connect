@@ -63,6 +63,9 @@ function escapeHtml(str) {
 
 function oauthResultHtml(type, data) {
   const payload = JSON.stringify({ type: 'sk8_oauth_callback', ...data });
+  // Escape </script> sequences to prevent breaking out of script context.
+  // JSON.stringify already produces valid JS, so no HTML escaping needed here.
+  const safePayload = payload.replace(/<\//g, '<\\/');
   return `<!DOCTYPE html>
 <html>
 <head><title>OAuth ${escapeHtml(type)}</title></head>
@@ -70,7 +73,8 @@ function oauthResultHtml(type, data) {
 <p>${escapeHtml(type === 'success' ? 'Authorization successful. You may close this window.' : 'Authorization failed. You may close this window.')}</p>
 <script>
   if (window.opener) {
-    window.opener.postMessage(${escapeHtml(payload)}, '*');
+    // TODO: consider accepting a targetOrigin option instead of '*'
+    window.opener.postMessage(${safePayload}, '*');
   }
   window.close();
 </script>
@@ -111,6 +115,8 @@ function initializeSK8OAuthCallback({ apiKey, baseUrl } = {}) {
         return;
       }
 
+      // No x-external-id header needed — the encrypted state parameter
+      // carries all tenant context (grantTenantId, applicationTenantId, etc.)
       const exchangeUrl = `${finalBaseUrl}/api-gateway/v1/oauth/exchange`;
       const upstream = await fetch(exchangeUrl, {
         method: 'POST',
@@ -143,7 +149,19 @@ function initializeSK8OAuthCallback({ apiKey, baseUrl } = {}) {
         return;
       }
 
-      const result = JSON.parse(responseText);
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'text/html');
+        res.end(oauthResultHtml('error', {
+          status: 'error',
+          error: 'exchange_failed',
+          error_description: 'Exchange returned an invalid response',
+        }));
+        return;
+      }
       res.statusCode = 200;
       res.setHeader('Content-Type', 'text/html');
       res.end(oauthResultHtml('success', {

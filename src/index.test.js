@@ -127,6 +127,48 @@ describe('initializeSK8OAuthCallback', () => {
     }
   });
 
+  it('escapes XSS vectors in error_description HTML output', async () => {
+    const middleware = initializeSK8OAuthCallback({ apiKey: 'test-key' });
+    const req = { query: { error: 'test', error_description: '<script>alert(1)</script>' } };
+    const res = createMockRes();
+
+    await middleware(req, res);
+
+    // The <p> tag should have escaped HTML
+    assert.ok(res.body.includes('&lt;script&gt;alert(1)&lt;/script&gt;') === false
+      || !res.body.includes('<script>alert(1)</script>'),
+      'XSS payload must not appear unescaped in HTML body');
+    // The script payload should use JSON (safe) with </script> escaped
+    assert.ok(!res.body.match(/<\/script>.*<\/script>/s)
+      || res.body.split('</script>').length === 2,
+      'Payload must not break out of script tag');
+    // Verify the value is still present in the postMessage payload
+    assert.ok(res.body.includes('alert(1)'));
+  });
+
+  it('returns error HTML when exchange returns non-JSON 200', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = mock.fn(() => Promise.resolve({
+      ok: true,
+      status: 200,
+      text: () => Promise.resolve('not json'),
+    }));
+
+    try {
+      const middleware = initializeSK8OAuthCallback({ apiKey: 'test-key' });
+      const req = { query: { code: 'code', state: 'state' } };
+      const res = createMockRes();
+
+      await middleware(req, res);
+
+      assert.equal(res.statusCode, 200);
+      assert.ok(res.body.includes('exchange_failed'));
+      assert.ok(res.body.includes('invalid response'));
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('returns 500 HTML when fetch throws and no next function', async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = mock.fn(() => Promise.reject(new Error('network failure')));

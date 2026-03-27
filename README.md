@@ -150,11 +150,16 @@ Place the web component anywhere in your application.
 
 **React:**
 ```jsx
+const pipelineEntityNaming = JSON.stringify({
+  pipeline: { singular: 'Integration', plural: 'Integrations' },
+});
+
 function MyComponent() {
   return (
     <div>
       <pipelines-embed
         base-api="https://your-backend.example.com/api/sk8-embedded"
+        entity-naming={pipelineEntityNaming}
       />
     </div>
   );
@@ -167,6 +172,7 @@ function MyComponent() {
   <div>
     <pipelines-embed
       :base-api="apiUrl"
+      :entity-naming="entityNamingJson"
     />
   </div>
 </template>
@@ -175,7 +181,10 @@ function MyComponent() {
 export default {
   data() {
     return {
-      apiUrl: 'https://your-backend.example.com/api/sk8-embedded'
+      apiUrl: 'https://your-backend.example.com/api/sk8-embedded',
+      entityNamingJson: JSON.stringify({
+        pipeline: { singular: 'Integration', plural: 'Integrations' },
+      }),
     };
   }
 };
@@ -187,20 +196,143 @@ export default {
 // Dynamically add component
 const sk8Component = document.createElement('pipelines-embed');
 sk8Component.setAttribute('base-api', 'https://your-backend.example.com/api/sk8-embedded');
+sk8Component.setAttribute(
+  'entity-naming',
+  JSON.stringify({
+    pipeline: { singular: 'Integration', plural: 'Integrations' },
+  }),
+);
 document.getElementById('container').appendChild(sk8Component);
 ```
 
 ---
 
-## Configuration Options
+## Customization
+
+You can tailor how SK8 reads in your product in two supported ways: **labels** (what users see) and **styling** (how it looks), without changing SK8 APIs or data models.
+
+### Custom entity names (`entity-naming`)
+
+Each embed exposes an optional **`entity-naming`** attribute. The value must be a **JSON object** (as a string in HTML). You can override **singular** and **plural** labels per entity kind. Unspecified keys keep the built-in defaults.
+
+**Default labels** (when `entity-naming` is omitted):
+
+| Entity kind | JSON key | Default singular | Default plural |
+|-------------|----------|------------------|----------------|
+| Pipeline | `pipeline` | Pipeline | Pipelines |
+| Template | `template` | Template | Templates |
+| Account | `account` | Account | Accounts |
+
+**Which embed uses which entities**
+
+| Embed | `pipeline` | `template` | `account` |
+|-------|:----------:|:----------:|:---------:|
+| `pipelines-embed` | Yes | Yes | Yes |
+| `templates-embed` | Yes | Yes | Yes |
+| `accounts-embed` | — | — | Yes |
+
+`pipelines-embed` and `templates-embed` flows can reference all **three** kinds (for example pipeline and template pickers, accounts, and related copy). **`accounts-embed`** only surfaces **account** copy; pass `account` to customize it—the other keys are not used in that UI.
+
+**JSON shape:**
+
+```json
+{
+  "pipeline": { "singular": "…", "plural": "…" },
+  "template": { "singular": "…", "plural": "…" },
+  "account": { "singular": "…", "plural": "…" }
+}
+```
+
+Each top-level key is optional. You only need to include the keys you want to rename.
+
+**Examples (single entity per embed):**
+
+```html
+<pipelines-embed
+  base-api="https://your-backend.example.com/api/sk8-embedded"
+  entity-naming='{"pipeline":{"singular":"Integration","plural":"Integrations"}}'
+/>
+
+<templates-embed
+  base-api="https://your-backend.example.com/api/sk8-embedded"
+  entity-naming='{"template":{"singular":"Blueprint","plural":"Blueprints"}}'
+/>
+
+<accounts-embed
+  base-api="https://your-backend.example.com/api/sk8-embedded"
+  entity-naming='{"account":{"singular":"Connection","plural":"Connections"}}'
+/>
+```
+
+**Example (multiple entity names on one embed):** on `pipelines-embed` or `templates-embed`, pass `pipeline`, `template`, and `account` together when you want consistent wording across the flow:
+
+```html
+<pipelines-embed
+  base-api="https://your-backend.example.com/api/sk8-embedded"
+  entity-naming='{"pipeline":{"singular":"Integration","plural":"Integrations"},"template":{"singular":"Blueprint","plural":"Blueprints"},"account":{"singular":"Connection","plural":"Connections"}}'
+/>
+```
+
+The same JSON shape works in frameworks: build one object, pass it as `JSON.stringify(...)` to the `entity-naming` attribute.
+
+These names flow through UI copy (page titles, buttons, table headings, forms, confirmations, and similar) wherever the product refers to those entities in user-visible text. They do **not** change API paths, resource IDs, or backend terminology.
+
+### Styling with CSS `::part()`
+
+Embed scripts render inside an **open shadow root**. SK8 exposes selected internal elements with the standard **`part`** attribute so your page can style them from **outside** the component using the **`::part()`** pseudo-element on the custom element host.
+
+SK8's internal styles usually stay within **single-class** specificity, so rules you author on the host (for example `pipelines-embed::part(container)`) typically **take precedence** over them and apply **without** `!important`.
+
+**Selector pattern:**
+
+```css
+pipelines-embed::part(part-name) {
+  /* your rules */
+}
+```
+
+**Exposed part names** (reference for styling):
+
+| Area | `part` value(s) | Purpose |
+|------|-----------------|--------|
+| Main layout | `container` | Outer page shell padding and title block |
+| | `header` | Title row wrapper |
+| | `title` | Main heading |
+| | `description` | Subtitle / description text |
+| Primary action | `button`, `main-action-button` | Primary component button (e.g. Create Pipeline) |
+| Table panel | `table-panel` | Panel around the data table |
+| | `table-panel-header` | Panel header strip |
+| | `table-title` | Panel section title |
+| | `table-description` | Panel description |
+| Data table | `table-container` | Scroll / table wrapper |
+| | `table-header` | `<thead>` |
+| | `table-head` | Header cell |
+| | `table-body` | `<tbody>` |
+| | `table-row` | Row |
+| | `table-cell` | Cell |
+| Forms (e.g. create/edit panels) | `form-panel` | Form card |
+| | `form-panel-header` | Form header bar |
+| | `form-panel-title` | Form title |
+| | `form-panel-body` | Form body |
+| | `form-panel-footer` | Form footer |
+| | `button`, `form-cancel-button` | Cancel |
+| | `button`, `form-submit-button` | Submit |
+| Fields | `input` | Text input |
+| | `input`, `select` | Select |
+| | `input`, `textarea` | Textarea |
+| Row actions menu | `actions-menu-trigger` | Menu trigger |
+| | `dropdown-menu-content` | Menu surface |
+| | `dropdown-menu-item` | Menu item |
+
+---
 
 ### Component Attributes
 
 | Attribute | Required | Type | Default | Description |
 |-----------|----------|------|---------|-------------|
 | `base-api` | **Yes** | string | - | Full path to your backend endpoint with SK8 middleware |
+| `entity-naming` | No | JSON string | (see Customization section) | Optional display names for entities inside the embed (singular and plural). Parsed as JSON and merged with SK8 defaults. |
 
----
 
 ## Repository Structure
 

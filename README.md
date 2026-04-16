@@ -1,4 +1,4 @@
-# @sk8/connect
+# @sk8ai/connect
 
 SK8 vendor integration SDK — middleware and embeddable components.
 
@@ -27,7 +27,7 @@ Before beginning, ensure you have:
 Install the SK8 npm package on your backend server:
 
 ```bash
-npm i @sk8/connect
+npm i @sk8ai/connect
 ```
 
 ### Create the Middleware Endpoint
@@ -46,11 +46,11 @@ This middleware must set `clientId` attribute on the request object.
 
 // CommonJS
 const express = require('express');
-const { initializeSK8Middleware } = require('@sk8/connect');
+const { initializeSK8Middleware } = require('@sk8ai/connect');
 
 // ESM
 import express from 'express';
-import { initializeSK8Middleware } from '@sk8/connect';
+import { initializeSK8Middleware } from '@sk8ai/connect';
 
 const app = express();
 
@@ -106,10 +106,10 @@ The embed scripts are included in this package under `embed/`. Copy them to your
 
 ```bash
 # Copy from node_modules after installing
-cp node_modules/@sk8/connect/embed/pipelines-embed.js public/embed/
+cp node_modules/@sk8ai/connect/embed/pipelines-embed.js public/embed/
 
 # Or copy all embed scripts
-cp node_modules/@sk8/connect/embed/*.js public/embed/
+cp node_modules/@sk8ai/connect/embed/*.js public/embed/
 ```
 
 Available components:
@@ -310,6 +310,8 @@ pipelines-embed::part(part-name) {
 | | `table-body` | `<tbody>` |
 | | `table-row` | Row |
 | | `table-cell` | Cell |
+| Embedded template picker | `embedded-template-tile-grid` | Grid wrapper for embedded template selection |
+| | `embedded-template-tile` | Individual template tile in embedded selection mode |
 | Forms (e.g. create/edit panels) | `form-panel` | Form card |
 | | `form-panel-header` | Form header bar |
 | | `form-panel-title` | Form title |

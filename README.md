@@ -98,6 +98,197 @@ This function will be called only on error response from the SK8 API because typ
 If 'next' is not a function then on SK8 API error response a generic
 500 error will be returned as a response so there are no hanging requests left.
 
+### Popular node js framework integration examples
+
+The SDK has been validated with these backend setups:
+
+- Express (JavaScript)
+- Express (TypeScript)
+- Fastify (`@fastify/middie` bridge)
+- NestJS (`app.use(...)` middleware mounting)
+
+All tested variants keep the same middleware contract:
+
+- body parser before SK8 middleware
+- `req.clientId` set by your middleware
+- SK8 middleware mounted on your backend endpoint (for example `/api/sk8-embedded`)
+
+Examples:
+
+```ts
+// Express + TypeScript
+import cors from "cors";
+import express, { type NextFunction, type Request, type Response } from "express";
+import { initializeSK8Middleware } from "@sk8ai/connect";
+
+type VendorRequest = Request & { clientId?: string };
+
+const PORT = process.env.PORT;
+const apiKey = process.env.SK8_API_KEY;
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+app.use("/static", express.static("static"));
+
+app.use((req: VendorRequest, _res: Response, next: NextFunction) => {
+  req.clientId = '<your-client-id-provider>';
+  next();
+});
+
+app.use(
+  "/api/sk8-embedded",
+  initializeSK8Middleware({
+    apiKey,
+    baseUrl: "https://app-dev.sk8.ai/api",
+  }),
+);
+
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({ error: "not found" });
+});
+
+app.listen(PORT, () => {
+  console.log(`Express-ts on http://localhost:${PORT}`);
+});
+```
+
+```js
+// Fastify + middie
+import Fastify from "fastify";
+import fastifyCors from "@fastify/cors";
+import middie from "@fastify/middie";
+import fastifyStatic from "@fastify/static";
+import { initializeSK8Middleware } from "@sk8ai/connect";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const PORT = process.env.PORT;
+const apiKey = process.env.SK8_API_KEY;
+
+const app = Fastify({ logger: true });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const staticRoot = join(__dirname, "..", "static");
+const allowedOrigins = new Set([
+  "http://127.0.0.1:5500",
+  "http://localhost:5500",
+]);
+
+await app.register(fastifyCors, {
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.has(origin)) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error(`Origin ${origin} is not allowed by CORS`), false);
+  },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+});
+await app.register(middie);
+await app.register(fastifyStatic, {
+  root: staticRoot,
+  prefix: "/static/",
+});
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    );
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, X-Requested-With",
+    );
+  }
+
+  if (req.method === "OPTIONS") {
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
+
+  next();
+});
+
+app.use((req, _res, next) => {
+  req.clientId = '<your-client-id-provider>';
+  next();
+});
+
+app.use(
+  "/api/sk8-embedded",
+  initializeSK8Middleware({
+    apiKey,
+    baseUrl: "https://app-dev.sk8.ai/api",
+  }),
+);
+
+app.setNotFoundHandler((_request, reply) => {
+  reply.code(404).send({ error: "not found" });
+});
+
+await app.listen({ port: PORT, host: "0.0.0.0" });
+app.log.info(`Fastify on http://localhost:${PORT}`);
+```
+
+```ts
+// NestJS + TypeScript
+import "reflect-metadata";
+import { NestFactory } from "@nestjs/core";
+import { type NestExpressApplication } from "@nestjs/platform-express";
+import { initializeSK8Middleware } from "@sk8ai/connect";
+import { type IncomingMessage, type ServerResponse } from "node:http";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { AppModule } from "./nest-app.module.ts";
+
+const PORT = process.env.PORT;
+const apiKey = process.env.SK8_API_KEY;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const staticRoot = join(__dirname, "..", "static");
+
+const bootstrap = async () => {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  app.enableCors({
+    origin: ["http://127.0.0.1:5500", "http://localhost:5500"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  });
+  app.useStaticAssets(staticRoot, { prefix: "/static/" });
+  app.use((req: IncomingMessage, _res: ServerResponse, next: (err?: unknown) => void) => {
+    (req as IncomingMessage & { clientId?: string }).clientId = '<your-client-id-provider>';
+    next();
+  });
+  app.use(
+    "/api/sk8-embedded",
+    initializeSK8Middleware({
+      apiKey,
+      baseUrl: "https://app-dev.sk8.ai/api",
+    }),
+  );
+  app.use((_req: IncomingMessage, res: ServerResponse) => {
+    res.statusCode = 404;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ error: "not found" }));
+  });
+
+  await app.listen(PORT);
+  console.log(`NestJS on http://localhost:${PORT}`);
+};
+
+await bootstrap();
+```
+
 ---
 
 ## Step 3: Serve the Component Script
@@ -168,28 +359,26 @@ function MyComponent() {
 
 **Vue:**
 ```vue
+<script setup>
+const baseApi = 'http://localhost:4000/api/sk8-embedded'
+
+const entityNaming = {
+  pipeline: { singular: 'Integration', plural: 'Integrations' },
+}
+const entityNamingJson = JSON.stringify(entityNaming)
+</script>
+
 <template>
   <div>
     <pipelines-embed
-      :base-api="apiUrl"
+      :base-api="baseApi"
       :entity-naming="entityNamingJson"
     />
   </div>
 </template>
-
-<script>
-export default {
-  data() {
-    return {
-      apiUrl: 'https://your-backend.example.com/api/sk8-embedded',
-      entityNamingJson: JSON.stringify({
-        pipeline: { singular: 'Integration', plural: 'Integrations' },
-      }),
-    };
-  }
-};
-</script>
 ```
+
+With **Vite**, set `compilerOptions.isCustomElement` (for example `(tag) => tag === 'pipelines-embed'`) on `@vitejs/plugin-vue` so Vue does not treat the tag as a missing component. Other bundlers (webpack, Rollup, etc.) can pass the same compiler option wherever your Vue plugin reads it.
 
 **Vanilla JavaScript:**
 ```js

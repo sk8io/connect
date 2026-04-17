@@ -205,7 +205,18 @@ sk8Component.setAttribute(
 document.getElementById('container').appendChild(sk8Component);
 ```
 
----
+## TypeScript support
+
+`@sk8ai/connect` ships a very simple declaration file.
+
+- No `declare module "@sk8ai/connect"` shim is required in consumer projects.
+- No `@types/sk8ai__connect` package is required.
+- For strict projects, type your own request augmentation (for example `type VendorRequest = Request & { clientId?: string }`) when setting `req.clientId`.
+- Standard import works in TS:
+
+```ts
+import { initializeSK8Middleware } from "@sk8ai/connect";
+```
 
 ## Customization
 
@@ -342,6 +353,7 @@ pipelines-embed::part(part-name) {
 connect/
 ├── src/
 │   └── index.js          # Middleware (published to npm)
+│   └── index.d.ts        # TypeScript declarations (published to npm)
 ├── embed/
 │   ├── pipelines-embed.js  # Pipeline web component (published to npm)
 │   ├── accounts-embed.js   # Account web component (published to npm)

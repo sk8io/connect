@@ -1,6 +1,6 @@
 {
   "name": "@sk8ai/connect",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "SK8 vendor integration SDK — middleware and embeddable components",
   "homepage": "https://github.com/sk8io/connect#readme",
   "bugs": {

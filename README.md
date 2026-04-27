@@ -422,16 +422,15 @@ Each embed exposes an optional **`entity-naming`** attribute. The value must be 
 | Pipeline | `pipeline` | Pipeline | Pipelines |
 | Template | `template` | Template | Templates |
 | Account | `account` | Account | Accounts |
+| Credential | `credentials` | Credential | Credentials |
 
 **Which embed uses which entities**
 
-| Embed | `pipeline` | `template` | `account` |
-|-------|:----------:|:----------:|:---------:|
-| `pipelines-embed` | Yes | Yes | Yes |
-| `templates-embed` | Yes | Yes | Yes |
-| `accounts-embed` | — | — | Yes |
-
-`pipelines-embed` and `templates-embed` flows can reference all **three** kinds (for example pipeline and template pickers, accounts, and related copy). **`accounts-embed`** only surfaces **account** copy; pass `account` to customize it—the other keys are not used in that UI.
+| Embed | `pipeline` | `template` | `account` | `credentials` |
+|-------|:----------:|:----------:|:---------:|:-------------:|
+| `pipelines-embed` | Yes | Yes | Yes | Yes |
+| `templates-embed` | Yes | Yes | Yes | Yes |
+| `accounts-embed` | — | — | Yes | Yes |
 
 **JSON shape:**
 
@@ -439,7 +438,8 @@ Each embed exposes an optional **`entity-naming`** attribute. The value must be 
 {
   "pipeline": { "singular": "…", "plural": "…" },
   "template": { "singular": "…", "plural": "…" },
-  "account": { "singular": "…", "plural": "…" }
+  "account": { "singular": "…", "plural": "…" },
+  "credentials": { "singular": "…", "plural": "…" }
 }
 ```
 
@@ -460,7 +460,7 @@ Each top-level key is optional. You only need to include the keys you want to re
 
 <accounts-embed
   base-api="https://your-backend.example.com/api/sk8-embedded"
-  entity-naming='{"account":{"singular":"Connection","plural":"Connections"}}'
+  entity-naming='{"account":{"singular":"Connection","plural":"Connections"},"credentials":{"singular":"Secret","plural":"Secrets"}}'
 />
 ```
 
@@ -500,6 +500,10 @@ pipelines-embed::part(part-name) {
 | | `title` | Main heading |
 | | `description` | Subtitle / description text |
 | Primary action | `button`, `main-action-button` | Primary component button (e.g. Create Pipeline) |
+| Refresh controls | `refresh-controls-container` | Wrapper area that positions refresh controls |
+| | `refresh-controls-wrapper` | Visual container for refresh actions |
+| | `manual-refresh-button` | Manual refresh trigger button |
+| | `auto-refresh-button` | Auto-refresh toggle/button |
 | Table panel | `table-panel` | Panel around the data table |
 | | `table-panel-header` | Panel header strip |
 | | `table-title` | Panel section title |
@@ -532,7 +536,7 @@ pipelines-embed::part(part-name) {
 
 | Attribute | Required | Type | Default | Description |
 |-----------|----------|------|---------|-------------|
-| `base-api` | **Yes** | string | - | Full path to your backend endpoint with SK8 middleware |
+| `base-api` | **Yes** | string | - | Backend endpoint with SK8 middleware. Use an absolute URL when frontend and backend are on different origins; use a relative path when they share the same origin. |
 | `entity-naming` | No | JSON string | (see Customization section) | Optional display names for entities inside the embed (singular and plural). Parsed as JSON and merged with SK8 defaults. |
 
 
